@@ -1,0 +1,16 @@
+/input_data
+/output_data
+/nn_models
+/temp
+/visual_data
+/deprecated
+/svm_models
+/svm_output_data
+/svm_visual_data
+/plots
+/.ipynb_checkpoints
+*.pyc
+*.zip
+*.pem
+*.png
+*.ipynb

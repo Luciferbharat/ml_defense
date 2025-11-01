@@ -1,85 +1,91 @@
 import numpy as np
 import matplotlib
-matplotlib.use('Agg') # Must be before importing matplotlib.pyplot or pylab!
+matplotlib.use('Agg')  # Must be before importing pyplot
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
-
-# from matplotlib import pyplot as plt
-import glob as glob
 import os
-from matplotlib.pyplot import cm
-from cycler import cycler
 
-font ={'size': 17}
+# ----------------- CONFIG -----------------
+FONT = {'size': 17}
+OUTPUT_DATA_DIR = "output_data"
+PLOT_OUTPUT_DIR = "plots"
+INPUT_FILE = "FSG_mod_MNIST_nn_2_100_strategic.txt"
+LIST_DIM = [784, 331, 100, 50, 40, 30, 20, 10]
+TITLE = "Re-training defense for MNIST data against FSG attack\nModel: FC100-100-10"
+X_LABEL = "Adversarial perturbation"
+Y_LABEL = "Adversarial success"
+SAVE_FILE = "MNIST_nn_2_strategic.png"
+# ------------------------------------------
 
-matplotlib.rc('font', **font)
+matplotlib.rc('font', **FONT)
+COLORS = ('b', 'g', 'r', 'c', 'm', 'y', 'k')
 
-cm=plt.get_cmap('gist_rainbow')
-NUM_COLORS=9
+# Dynamically pick markers
+MARKERS = [
+    m for m in Line2D.markers
+    if isinstance(m, str) and len(m) == 1 and m != ' '
+]
 
-script_dir=os.path.dirname(__file__)
-rel_path_o="output_data/"
-abs_path_o=os.path.join(script_dir,rel_path_o)
+# Resolve paths
+script_dir = os.path.dirname(os.path.abspath(__file__))
+abs_path_o = os.path.join(script_dir, OUTPUT_DATA_DIR)
+abs_path_p = os.path.join(script_dir, PLOT_OUTPUT_DIR)
 
-# plt.rc('axes', prop_cycle=(cycler('linestyle', ['-', '--', ':', '-.'])))
-
-fig, ax = plt.subplots(1, 1,figsize=(12,9))
-
-ax.get_xaxis().tick_bottom()
-ax.get_yaxis().tick_left()
-# ax.set_prop_cycle(cycler('color',[cm(1.*i/3) for i in range(3)])*cycler('linestyle',['-', '--', ':','-.']))
-colors = ('b', 'g', 'r', 'c', 'm', 'y', 'k')
-markers = []
-
-for m in Line2D.markers:
-    try:
-        if len(m) == 1 and m != ' ':
-            markers.append(m)
-    except TypeError:
-        pass
-
-
-handle_list=[]
-
-# list_dim=[10,20,30,40,50,100,155]
-list_dim=[784,331,100,50,40,30,20,10]
-dims=len(list_dim)
-#for item in glob.glob(abs_path_o+'Gradient_attack_SVM_PCA_clean_*.txt'):
-count=0
-for item in list_dim:
-    print item
-    count=count+1
-    color = colors[count % len(colors)]
-    style = markers[count % len(markers)]
-    path_curr=abs_path_o+'FSG_mod_MNIST_nn_2_100_strategic.txt'
-    curr_array=np.genfromtxt(path_curr,delimiter=',',skip_header=2+52*(count-1),skip_footer=52*(dims-count))
-    handle_list.append(plt.plot(curr_array[:,0],curr_array[:,5],linestyle='-', marker=style, color=color, markersize=10,label=item))
-
-# curr_array=np.genfromtxt(abs_path_o+'FSG_MNIST_data_hidden_2_100_.txt',skip_header=22,delimiter=',')
-# plt.plot(curr_array[10:,1],curr_array[10:,4],label='No defense',marker='o',markersize=10)
-
-# theo_limit=np.array((1.0-0.915)*100)
-# y=np.tile(theo_limit,len(curr_array))
-# plt.plot(curr_array[:,1],y,color='black',marker='o',label='SVM limit')
-
-plt.xlabel(r'Adversarial perturbation')
-plt.ylabel('Adversarial success')
-plt.title('Re-training defense for MNIST data against FSG attack \n Model: FC100-100-10')
-# plt.ylim(0.0,100.0)
-# plt.xlim(0.01,0.1)
-plt.xticks()
-
-# handles, labels = ax.get_legend_handles_labels()
-# # sort both labels and handles by labels
-# labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0]))
-# ax.legend(handles, labels)
-
-script_dir=os.path.dirname(__file__)
-rel_path_p="plots/"
-abs_path_p=os.path.join(script_dir,rel_path_p)
 if not os.path.exists(abs_path_p):
     os.makedirs(abs_path_p)
 
-plt.legend(loc=2,fontsize=14)
-#plt.show()
-plt.savefig(abs_path_p+'MNIST_nn_2_strategic.png', bbox_inches='tight')
+# ----------------- PLOTTING -----------------
+fig, ax = plt.subplots(figsize=(12, 9))
+ax.get_xaxis().tick_bottom()
+ax.get_yaxis().tick_left()
+
+handle_list = []
+dims = len(LIST_DIM)
+
+data_path = os.path.join(abs_path_o, INPUT_FILE)
+if not os.path.isfile(data_path):
+    raise FileNotFoundError(f"Input file not found: {data_path}")
+
+print(f"[INFO] Reading data from: {data_path}")
+
+for idx, dim in enumerate(LIST_DIM, start=1):
+    print(f"[DEBUG] Processing dimension: {dim}")
+    color = COLORS[idx % len(COLORS)]
+    marker = MARKERS[idx % len(MARKERS)]
+    try:
+        curr_array = np.genfromtxt(
+            data_path,
+            delimiter=',',
+            skip_header=2 + 52 * (idx - 1),
+            skip_footer=52 * (dims - idx)
+        )
+    except Exception as e:
+        print(f"[ERROR] Failed to read section for dim={dim}: {e}")
+        continue
+
+    if curr_array.ndim < 2 or curr_array.shape[1] <= 5:
+        print(f"[WARN] Skipping dim={dim} (invalid data format)")
+        continue
+
+    handle = ax.plot(
+        curr_array[:, 0],
+        curr_array[:, 5],
+        linestyle='-',
+        marker=marker,
+        color=color,
+        markersize=8,
+        label=str(dim)
+    )
+    handle_list.append(handle)
+
+ax.set_xlabel(X_LABEL)
+ax.set_ylabel(Y_LABEL)
+ax.set_title(TITLE)
+ax.legend(loc='upper left', fontsize=14)
+plt.tight_layout()
+
+save_path = os.path.join(abs_path_p, SAVE_FILE)
+plt.savefig(save_path, bbox_inches='tight')
+plt.close(fig)
+
+print(f"[SUCCESS] Plot saved to: {save_path}")

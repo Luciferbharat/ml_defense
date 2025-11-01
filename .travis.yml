@@ -1,20 +1,42 @@
+# .travis.yml — Updated Modern Version
+
 language: python
 python:
-    - 2.7
+  - "3.10"  # Use a stable, supported Python version
+
+# Cache dependencies to speed up builds
+cache: pip
 
 install:
-    - pip install -r requirement.txt
+  - pip install --upgrade pip
+  - pip install -r requirements.txt
+  - pip install pytest  # ensure testing tool available
 
 script:
-    - python run_defense.py
+  - pytest -v  # run tests with detailed output
 
-# after_success:
-#     -
+# Optional: run lint checks for code quality
+# Uncomment if you use flake8
+# before_script:
+#   - pip install flake8
+#   - flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
 
-# This reportedly works around an issue downloading packages from pypi on
-# travis.  Consider removing this after the underlying issue is fixed.
-# https://github.com/travis-ci/travis-ci/issues/2389
+# Only build main and dev branches
+branches:
+  only:
+    - main
+    - dev
+
+# Disable sudo mode (Travis now uses container-based infrastructure)
 sudo: false
 
 matrix:
-    fast_finish: true
+  fast_finish: true
+
+# Optional: notifications setup (email or Slack)
+# notifications:
+#   email:
+#     recipients:
+#       - your_email@example.com
+#     on_success: change
+#     on_failure: always
